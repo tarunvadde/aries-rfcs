@@ -381,9 +381,15 @@ If steps 1 to 3 pass, no presentation carries a wrong `nonce` or `audience`, and
 
 ### DIDComm v2
 
-The attachment content and the format identifiers are the same over DIDComm v1 and DIDComm v2. [RFC 0454](../0454-present-proof-v2/README.md) does not say how present-proof 2.0 messages are laid out in a DIDComm v2 message. When present-proof 2.0 messages with these formats are sent over DIDComm v2, `formats` and the `proposals~attach`, `request_presentations~attach` and `presentations~attach` arrays MUST stay in `body` with the [RFC 0017](../../concepts/0017-attachments/README.md) attachment shape (`@id`, `mime-type`, `data`), as in the example below. A `request-presentation` with these formats MUST have a `to` unless it is carried in an out-of-band invitation, and a `to` MUST list exactly one DID.
+The attachment content and the format identifiers are the same over DIDComm v1 and DIDComm v2. [RFC 0454](../0454-present-proof-v2/README.md) does not say how present-proof 2.0 messages are laid out in a DIDComm v2 message. When present-proof 2.0 messages with these formats are sent over DIDComm v2, they use the DIDComm v2 attachment layout, as in the example below:
 
-[Present Proof 3.0](https://github.com/decentralized-identity/waci-didcomm/blob/main/present_proof/present-proof-v3.md) is a separate protocol that puts the identifier in the `format` of each entry in `attachments`. This RFC registers its formats for RFC 0454 only.
+- Each attachment that would be in `proposals~attach`, `request_presentations~attach` or `presentations~attach` goes in the top-level `attachments` of the message ([DIDComm v2.1, Attachments](https://identity.foundation/didcomm-messaging/spec/v2.1/#attachments)). It has an `id`, a `media_type` of `application/json`, the format identifier in `format`, and its content in `data`.
+- `body` has no `formats` and none of these `~attach` arrays. Other fields such as `comment`, `goal_code` and `will_confirm` stay in `body`.
+- A `propose-presentation` that signals support for a format with a `formats` entry and no attachment (see [`propose-presentation` attachment format](#propose-presentation-attachment-format)) keeps that entry in `body.formats`.
+
+A `request-presentation` with these formats MUST have a `to` unless it is carried in an out-of-band invitation, and a `to` MUST list exactly one DID.
+
+[Present Proof 3.0](https://github.com/decentralized-identity/waci-didcomm/blob/main/present_proof/present-proof-v3.md) is a separate protocol with the same attachment layout. This RFC registers its formats for RFC 0454 only.
 
 ```json
 {
@@ -392,36 +398,31 @@ The attachment content and the format identifiers are the same over DIDComm v1 a
   "from": "did:example:verifier",
   "to": ["did:example:holder"],
   "body": {
-    "will_confirm": true,
-    "formats": [
-      {
-        "attach_id": "3cdf1bd6-eb53-484a-9572-d806f2fc1b09",
-        "format": "didcomm/dcql-request@v1.0"
-      }
-    ],
-    "request_presentations~attach": [
-      {
-        "@id": "3cdf1bd6-eb53-484a-9572-d806f2fc1b09",
-        "mime-type": "application/json",
-        "data": {
-          "json": {
-            "dcql_query": {
-              "credentials": [
-                {
-                  "id": "pid",
-                  "format": "dc+sd-jwt",
-                  "meta": { "vct_values": ["https://credentials.example.com/identity_credential"] },
-                  "claims": [{ "path": ["given_name"] }]
-                }
-              ]
-            },
-            "nonce": "uTI1bP0sSJzah8qqNnIcyygYDOSVuGh3JmN_h2n7VUo",
-            "audience": "didcomm:did:example:verifier"
-          }
+    "will_confirm": true
+  },
+  "attachments": [
+    {
+      "id": "3cdf1bd6-eb53-484a-9572-d806f2fc1b09",
+      "media_type": "application/json",
+      "format": "didcomm/dcql-request@v1.0",
+      "data": {
+        "json": {
+          "dcql_query": {
+            "credentials": [
+              {
+                "id": "pid",
+                "format": "dc+sd-jwt",
+                "meta": { "vct_values": ["https://credentials.example.com/identity_credential"] },
+                "claims": [{ "path": ["given_name"] }]
+              }
+            ]
+          },
+          "nonce": "uTI1bP0sSJzah8qqNnIcyygYDOSVuGh3JmN_h2n7VUo",
+          "audience": "didcomm:did:example:verifier"
         }
       }
-    ]
-  }
+    }
+  ]
 }
 ```
 
@@ -897,7 +898,7 @@ The media types `application/vc+sd-jwt` and `application/vp+sd-jwt` are register
 - IETF SD-JWT VCs issued under older drafts carry `typ` `vc+sd-jwt`. Should a verifier accept them under `dc+sd-jwt`?
 - RFC 0881 leaves `cnf` as `jwk` or `kid` to the issuer. This RFC supports both. Should a verifier be able to require one of them?
 - Should `transaction_data` be supported in a later version?
-- Should RFC 0454 describe how present-proof 2.0 messages are carried over DIDComm v2?
+- This RFC defines the DIDComm v2 attachment layout only for messages with its own formats. Should RFC 0454 define it for all present-proof 2.0 messages?
 - When SD-JWT VC and Token Status List are published as RFCs, this RFC should reference those.
 
 ## Implementations
