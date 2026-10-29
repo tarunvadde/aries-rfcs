@@ -125,7 +125,7 @@ The attachment is a JSON object with:
 
 When a verifier sends more than one `request-presentation` in a thread (for example after a counter proposal), each one gets a new `nonce`. Only the last request the verifier sent in the thread is valid.
 
-This version of the format does not support OpenID4VP `transaction_data`. A prover MUST reject a request whose attachment has a `transaction_data` property, as [OpenID4VP section 8.4, Transaction Data](https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#section-8.4) requires of a Wallet that does not support it.
+These formats use only the parts of OpenID4VP 1.0 that this RFC references. Other OpenID4VP parameters and features are not supported. The exception is `transaction_data`, which a Wallet that does not support it must reject instead of ignore. A prover MUST reject a request whose attachment has a `transaction_data` property ([OpenID4VP section 5, Authorization Request](https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#section-5), [section 8.4, Transaction Data](https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#section-8.4)).
 
 #### Audience
 
@@ -311,18 +311,9 @@ CBOR diagnostic:
 
 ### Credential status
 
-When a `dc+sd-jwt` credential has a `status` claim with a `status_list` reference ([Token Status List draft -21 section 6.2, Referenced Token in JOSE](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-status-list-21#section-6.2)), the verifier SHOULD check it, as [SD-JWT VC draft -22 section 2.4](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-sd-jwt-vc-22#section-2.4) says. Its Status List Token is a JWT ([SD-JWT VC draft -22 section 2.2.2.3, Registered JWT Claims](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-sd-jwt-vc-22#section-2.2.2.3)). The check follows [Token Status List draft -21 section 8.3, Validation Rules](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-status-list-21#section-8.3):
+If a credential carries status information, the verifier MUST check it as its credential format defines: the `status` claim of a `dc+sd-jwt` ([SD-JWT VC draft -22 section 2.4](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-sd-jwt-vc-22#section-2.4), [Token Status List draft -21 section 8.3, Validation Rules](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-status-list-21#section-8.3)), the `credentialStatus` of a `vc+sd-jwt` ([VC-JOSE-COSE section 5.4, Validation](https://www.w3.org/TR/vc-jose-cose/#validation-algorithm)) and the status in the MSO of an `mso_mdoc` when it has one. The verifier MUST discard a presentation whose credential is revoked (for a Token Status List, the status `0x01` INVALID). Other status values, such as `0x02` SUSPENDED, are left to verifier policy. If the verifier cannot determine the status, also when it does not support the status mechanism, it MUST discard the presentation. This is stricter than SD-JWT VC, which says status SHOULD be checked, and than VC-JOSE-COSE, which ignores a `credentialStatus` type the verifier does not understand.
 
-- Verify the credential itself first. An expired credential stays expired whatever its status.
-- Fetch the Status List Token from `uri` with an `Accept: application/statuslist+jwt` header (section 8.1, Status List Request, of the same draft). The verifier MUST only fetch a `uri` that uses `https`, and only after it has decided to trust the issuer (see [Verifier processing rules](#verifier-processing-rules)).
-- Validate the Status List Token: `typ` `statuslist+jwt`, a valid signature from a key the verifier trusts for that issuer, `sub` equal to `uri`, and `exp` when present. A verifier that caches Status List Tokens honors `ttl`.
-- Read the status at `idx`. An index out of bounds MUST lead to rejection.
-
-A verifier that checks status MUST discard a presentation whose status is `0x01` (INVALID). Every other value except `0x00` (VALID), including `0x02` (SUSPENDED), is left to verifier policy. If a verifier that checks status cannot determine it, because another check of [Token Status List draft -21 section 8.3](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-status-list-21#section-8.3) fails or because the `status` claim has no mechanism the verifier supports, it SHOULD discard the presentation.
-
-This RFC defines no status mechanism for `vc+sd-jwt`. A verifier SHOULD check each `credentialStatus` entry whose `type` it understands, and if it cannot determine that status, it SHOULD discard the presentation. An entry whose `type` the verifier does not understand is ignored ([VC-JOSE-COSE section 5.4, Validation](https://www.w3.org/TR/vc-jose-cose/#validation-algorithm)).
-
-This version defines no status check for `mso_mdoc` (see [Unresolved questions](#unresolved-questions)).
+The verifier fetches a status list only after it has decided to trust the issuer (see [Verifier processing rules](#verifier-processing-rules)), only from an `https` URI, and accepts it only when it is signed by a key the verifier trusts for that issuer. Token Status List leaves key resolution and trust to the verifier ([section 11.3](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-status-list-21#section-11.3)).
 
 ### Prover processing rules
 
@@ -846,7 +837,6 @@ The media types `application/vc+sd-jwt` and `application/vp+sd-jwt` are register
 - OpenID4VP or OpenID4VCI may later define an identifier for VCDM 2.0 credentials ([OpenID4VCI issue 194](https://github.com/openid/OpenID4VCI/issues/194)) and guidance on identifier collisions ([OpenID4VP issue 777](https://github.com/openid/OpenID4VP/issues/777)). If they do, this RFC should follow.
 - Which status mechanisms should a verifier support for `vc+sd-jwt`?
 - RFC 0881 names its media type `application/w3c-vc-sd-jwt` and leaves the choice of selectively disclosable claims to the issuer. Should a small update to RFC 0881 use `application/vc+sd-jwt` and keep the properties listed in [Credential formats](#credential-formats) always disclosed, so that issuance matches this RFC?
-- ISO/IEC 18013-5:2021 has no status element in the MSO. The draft second edition adds one that can reference a CWT Status List Token ([Token Status List draft -21 section 5.2, Status List Token in CWT Format](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-status-list-21#section-5.2), [section 6.3, Referenced Token in COSE](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-status-list-21#section-6.3)), an ISO identifier list, or both. Should a later version add a status check for `mso_mdoc` once that edition is published?
 - IETF SD-JWT VCs issued under older drafts carry `typ` `vc+sd-jwt`. Should a verifier accept them under `dc+sd-jwt`?
 - RFC 0881 leaves `cnf` as `jwk` or `kid` to the issuer. This RFC supports both. Should a verifier be able to require one of them?
 - Should `transaction_data` be supported in a later version?
