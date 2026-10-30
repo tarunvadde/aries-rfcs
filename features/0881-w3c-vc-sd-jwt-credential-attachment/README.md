@@ -194,9 +194,9 @@ A complete [`issue-credential` message from the Issue Credential protocol 2.0](.
 }
 ```
 
-- `credential` - Required. The SD-JWT in compact serialization format. The credential MUST conform to the VC Data Model 2.0 and use the `application/w3c-vc-sd-jwt` media type as defined in [W3C VC-JOSE-COSE](https://www.w3.org/TR/vc-jose-cose/).
+- `credential` - Required. The SD-JWT in compact serialization format. The credential MUST conform to the VC Data Model 2.0 and use the `application/vc+sd-jwt` media type as defined in [VC-JOSE-COSE section 6.1.3, application/vc+sd-jwt](https://www.w3.org/TR/vc-jose-cose/#vc-json-sd-jwt).
 
-It is up to the issuer to decide which claims are selectively disclosable. If `selectively_disclosable_claims` was provided in the offer, the issued SD-JWT MUST make at least those claims selectively disclosable. If `binding_required` was `true` in the offer, the issued SD-JWT MUST include a `cnf` (confirmation) claim bound to the holder's key as provided through the binding proof.
+It is up to the issuer to decide which claims are selectively disclosable, except that the top-level `@context`, `type`, `issuer`, `validFrom`, `validUntil`, `credentialStatus`, `credentialSchema`, `relatedResource` and `cnf` properties, and any property inside them, MUST NOT be selectively disclosable. A verifier needs them to check that the credential is authentic and still valid ([RFC 9901 section 9.7, Selectively Disclosable Validity Claims](https://www.rfc-editor.org/rfc/rfc9901.html#section-9.7), [VC-JOSE-COSE section 3.2.1](https://www.w3.org/TR/vc-jose-cose/#securing-with-sd-jwt)). `selectively_disclosable_claims` in the offer MUST NOT point to any of them. If `selectively_disclosable_claims` was provided in the offer, the issued SD-JWT MUST make at least those claims selectively disclosable. If `binding_required` was `true` in the offer, the issued SD-JWT MUST include a `cnf` (confirmation) claim bound to the holder's key as provided through the binding proof.
 
 ### Binding Methods
 
@@ -268,7 +268,7 @@ The attachment MUST be signed by including a signature in the `jws` field of the
 
 ##### Binding in Credential
 
-The issued SD-JWT MUST include a `cnf` (confirmation) claim containing the holder's public key material, enabling SD-JWT Key Binding as defined in [SD-JWT-based Verifiable Credentials](https://datatracker.ietf.org/doc/draft-ietf-oauth-sd-jwt-vc/).
+The issued SD-JWT MUST include a `cnf` (confirmation) claim containing the holder's public key material ([VC-JOSE-COSE section 4.1.3, cnf](https://www.w3.org/TR/vc-jose-cose/#cnf), [RFC 7800](https://www.rfc-editor.org/rfc/rfc7800.html)). When presenting the credential, the holder proves possession of the `cnf` key as the presentation format defines, for example by signing a `vp+sd-jwt` ([VC-JOSE-COSE section 3.2.2](https://www.w3.org/TR/vc-jose-cose/#securing-vps-sd-jwt)) with it. A Key Binding JWT ([RFC 9901 section 4.3](https://www.rfc-editor.org/rfc/rfc9901.html#section-4.3)) is not used for this.
 
 ## Drawbacks
 
